@@ -1,0 +1,48 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+// import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  AcceptLanguageResolver,
+  CookieResolver,
+  HeaderResolver,
+  I18nModule,
+  QueryResolver,
+} from 'nestjs-i18n';
+import { join } from 'path';
+import configuration from 'src/config/configuration';
+import { envValidationSchema } from 'src/config/env.validation';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+// import { typeOrmConfig } from './config/typeorm.config';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        abortEarly: false,
+      },
+    }),
+    // TypeOrmModule.forRootAsync(typeOrmConfig),
+    I18nModule.forRootAsync({
+      useFactory: () => ({
+        fallbackLanguage: 'en',
+        loaderOptions: {
+          path: join(__dirname, '/i18n/'),
+          watch: true,
+        },
+      }),
+      resolvers: [
+        new QueryResolver(['lang', 'l']),
+        new HeaderResolver(['x-custom-lang']),
+        new CookieResolver(),
+        AcceptLanguageResolver,
+      ],
+    }),
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
