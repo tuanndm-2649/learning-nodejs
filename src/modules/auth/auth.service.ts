@@ -16,6 +16,7 @@ import {
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -28,7 +29,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<RegisterResponseDto> {
     const existingUser = await this.usersService.findByEmail(dto.email);
 
     if (existingUser) {
@@ -47,7 +48,7 @@ export class AuthService {
     return user;
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<TokenPair> {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
       throw new UnauthorizedException(

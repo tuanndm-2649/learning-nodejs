@@ -1,25 +1,35 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
+import { I18nService } from 'nestjs-i18n';
 import { Repository } from 'typeorm';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly i18n: I18nService,
   ) {}
 
   findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOneBy({ email });
   }
 
-  create(
-    data: Pick<User, 'name' | 'email' | 'password'>,
-  ): Promise<User | null> {
+  async create(data: Pick<User, 'name' | 'email' | 'password'>): Promise<User> {
     const user = this.userRepository.create(data);
 
-    return this.userRepository.save(user);
+    try {
+      return await this.userRepository.save(user);
+    } catch (error) {
+      const existingUser = await this.findByEmail(data.email);
+
+      if (existingUser) {
+        throw new ConflictException(this.i18n.t('users.error.userExists'));
+      }
+
+      throw error;
+    }
   }
 
   findById(id: number): Promise<User | null> {

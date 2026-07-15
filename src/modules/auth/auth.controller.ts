@@ -1,7 +1,9 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { ApiCreatedResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from 'src/common/decorators/public.decorator';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
 import { TokenPair } from 'src/common/interfaces/token-payload.interface';
@@ -12,13 +14,14 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  register(@Body() dto: RegisterDto) {
+  @ApiCreatedResponse({ type: RegisterResponseDto })
+  register(@Body() dto: RegisterDto): Promise<RegisterResponseDto> {
     return this.authService.register(dto);
   }
 
   @Public()
   @Post('login')
-  login(@Body() dto: LoginDto) {
+  login(@Body() dto: LoginDto): Promise<TokenPair> {
     return this.authService.login(dto);
   }
 
