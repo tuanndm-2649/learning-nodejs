@@ -36,14 +36,7 @@ export class AuthService {
       throw new ConflictException(this.i18n.t('auth.error.userExists'));
     }
 
-    const { password, ...rest } = dto;
-
-    const passwordHash = await bcrypt.hash(password, this.saltRounds);
-
-    const user = await this.usersService.create({
-      password: passwordHash,
-      ...rest,
-    });
+    const user = await this.usersService.create(dto);
 
     return user;
   }

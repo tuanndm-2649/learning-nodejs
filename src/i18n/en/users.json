@@ -1,5 +1,7 @@
 {
   "error": {
-    "userExists": "Email already exists"
+    "userExists": "Email already exists",
+    "notFound": "User not found",
+    "forbidden": "You do not have permission to perform this action"
   }
 }
