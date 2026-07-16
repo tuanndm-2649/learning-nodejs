@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
+import { ClassSerializerInterceptor, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-// import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   AcceptLanguageResolver,
   CookieResolver,
@@ -13,7 +13,12 @@ import configuration from 'src/config/configuration';
 import { envValidationSchema } from 'src/config/env.validation';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-// import { typeOrmConfig } from './config/typeorm.config';
+import { typeOrmConfig } from './config/typeorm.config';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { APP_FILTER, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { AllExceptionsFilter } from './common/filter/all-exceptions.filter';
 
 @Module({
   imports: [
@@ -25,7 +30,8 @@ import { AppService } from './app.service';
         abortEarly: false,
       },
     }),
-    // TypeOrmModule.forRootAsync(typeOrmConfig),
+    TypeOrmModule.forRootAsync(typeOrmConfig),
+    UsersModule,
     I18nModule.forRootAsync({
       useFactory: () => ({
         fallbackLanguage: 'en',
@@ -41,8 +47,25 @@ import { AppService } from './app.service';
         AcceptLanguageResolver,
       ],
     }),
+    AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useFactory: (reflector: Reflector) =>
+        new ClassSerializerInterceptor(reflector),
+      inject: [Reflector],
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+  ],
 })
 export class AppModule {}
