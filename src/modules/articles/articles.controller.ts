@@ -11,7 +11,11 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
 import type { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { ArticlesService } from './articles.service';
 import { ArticleResponseDto } from './dto/article-response.dto';
@@ -25,26 +29,32 @@ export class ArticlesController {
 
   @Post()
   @ApiCreatedResponse({ type: ArticleResponseDto })
-  create(@Body() dto: CreateArticleDto, @Req() req: AuthenticatedRequest) {
+  create(
+    @Body() dto: CreateArticleDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ArticleResponseDto> {
     return this.articlesService.create(dto, req.user!.sub);
   }
 
   @Get()
-  findAll() {
+  @ApiOkResponse({ type: [ArticleResponseDto] })
+  findAll(): Promise<ArticleResponseDto[]> {
     return this.articlesService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  @ApiOkResponse({ type: ArticleResponseDto })
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<ArticleResponseDto> {
     return this.articlesService.findOneOrFail(id);
   }
 
   @Patch(':id')
+  @ApiOkResponse({ type: ArticleResponseDto })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateArticleDto,
     @Req() req: AuthenticatedRequest,
-  ) {
+  ): Promise<ArticleResponseDto> {
     return this.articlesService.update(id, req.user!, dto);
   }
 

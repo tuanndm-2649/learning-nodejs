@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { I18nService } from 'nestjs-i18n';
 import { Repository } from 'typeorm';
 import { AccessTokenPayload } from 'src/common/interfaces/token-payload.interface';
+import { ArticleResponseDto } from './dto/article-response.dto';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { Article } from './entities/article.entity';
@@ -19,40 +20,41 @@ export class ArticlesService {
     private readonly i18n: I18nService,
   ) {}
 
-  async create(dto: CreateArticleDto, authorId: number): Promise<Article> {
+  async create(
+    dto: CreateArticleDto,
+    authorId: number,
+  ): Promise<ArticleResponseDto> {
     const article = this.articleRepository.create({
       ...dto,
       author: { id: authorId },
     });
 
     const saved = await this.articleRepository.save(article);
+    const created = await this.findEntityOrFail(saved.id);
 
-    return this.findOneOrFail(saved.id);
+    return new ArticleResponseDto(created);
   }
 
-  findAll(): Promise<Article[]> {
-    return this.articleRepository.find({ relations: { author: true } });
-  }
-
-  async findOneOrFail(id: number): Promise<Article> {
-    const article = await this.articleRepository.findOne({
-      where: { id },
+  async findAll(): Promise<ArticleResponseDto[]> {
+    const articles = await this.articleRepository.find({
       relations: { author: true },
     });
 
-    if (!article) {
-      throw new NotFoundException(this.i18n.t('articles.error.notFound'));
-    }
+    return articles.map((article) => new ArticleResponseDto(article));
+  }
 
-    return article;
+  async findOneOrFail(id: number): Promise<ArticleResponseDto> {
+    const article = await this.findEntityOrFail(id);
+
+    return new ArticleResponseDto(article);
   }
 
   async update(
     id: number,
     currentUser: AccessTokenPayload,
     dto: UpdateArticleDto,
-  ): Promise<Article> {
-    const article = await this.findOneOrFail(id);
+  ): Promise<ArticleResponseDto> {
+    const article = await this.findEntityOrFail(id);
 
     this.assertCanModify(article, currentUser);
 
@@ -64,15 +66,30 @@ export class ArticlesService {
       article.content = dto.content;
     }
 
-    return this.articleRepository.save(article);
+    const saved = await this.articleRepository.save(article);
+
+    return new ArticleResponseDto(saved);
   }
 
   async remove(id: number, currentUser: AccessTokenPayload): Promise<void> {
-    const article = await this.findOneOrFail(id);
+    const article = await this.findEntityOrFail(id);
 
     this.assertCanModify(article, currentUser);
 
     await this.articleRepository.delete(id);
+  }
+
+  private async findEntityOrFail(id: number): Promise<Article> {
+    const article = await this.articleRepository.findOne({
+      where: { id },
+      relations: { author: true },
+    });
+
+    if (!article) {
+      throw new NotFoundException(this.i18n.t('articles.error.notFound'));
+    }
+
+    return article;
   }
 
   private assertCanModify(
