@@ -16,6 +16,7 @@ import { AppService } from './app.service';
 import { typeOrmConfig } from './config/typeorm.config';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ArticlesModule } from './modules/articles/articles.module';
 import { APP_FILTER, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filter/all-exceptions.filter';
@@ -32,6 +33,7 @@ import { AllExceptionsFilter } from './common/filter/all-exceptions.filter';
     }),
     TypeOrmModule.forRootAsync(typeOrmConfig),
     UsersModule,
+    ArticlesModule,
     I18nModule.forRootAsync({
       useFactory: () => ({
         fallbackLanguage: 'en',
