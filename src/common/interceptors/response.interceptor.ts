@@ -14,6 +14,21 @@ export interface ApiSuccessResponse<T> {
   success: true;
   statusCode: number;
   data: T;
+  meta?: unknown;
+}
+
+interface PaginatedResult<T> {
+  data: T;
+  meta: unknown;
+}
+
+function isPaginatedResult(value: unknown): value is PaginatedResult<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'data' in value &&
+    'meta' in value
+  );
 }
 
 @Injectable()
@@ -28,11 +43,22 @@ export class ResponseInterceptor<T> implements NestInterceptor<
     const response = context.switchToHttp().getResponse<HttpResponse>();
 
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        statusCode: response.statusCode,
-        data,
-      })),
+      map((result) => {
+        if (isPaginatedResult(result)) {
+          return {
+            success: true as const,
+            statusCode: response.statusCode,
+            data: result.data as T,
+            meta: result.meta,
+          };
+        }
+
+        return {
+          success: true as const,
+          statusCode: response.statusCode,
+          data: result,
+        };
+      }),
     );
   }
 }

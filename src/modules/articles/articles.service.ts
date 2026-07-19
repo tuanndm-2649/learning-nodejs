@@ -1,12 +1,12 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { I18nService } from 'nestjs-i18n';
 import { Repository } from 'typeorm';
+import { PaginationMetaDto } from 'src/common/dto/paginated-response.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { AccessTokenPayload } from 'src/common/interfaces/token-payload.interface';
+import { assertOwnerOrAdmin } from 'src/common/utils/assert-owner-or-admin.util';
+import { findEntityOrFail } from 'src/common/utils/find-entity-or-fail.util';
 import { ArticleResponseDto } from './dto/article-response.dto';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
@@ -30,21 +30,37 @@ export class ArticlesService {
     });
 
     const saved = await this.articleRepository.save(article);
-    const created = await this.findEntityOrFail(saved.id);
+    const created = await findEntityOrFail(
+      this.articleRepository,
+      { where: { id: saved.id }, relations: { author: true } },
+      this.i18n.t('articles.error.notFound'),
+    );
 
     return new ArticleResponseDto(created);
   }
 
-  async findAll(): Promise<ArticleResponseDto[]> {
-    const articles = await this.articleRepository.find({
+  async findAll(
+    query: PaginationQueryDto,
+  ): Promise<{ data: ArticleResponseDto[]; meta: PaginationMetaDto }> {
+    const [articles, total] = await this.articleRepository.findAndCount({
       relations: { author: true },
+      skip: query.skip,
+      take: query.limit,
+      order: { createdAt: 'DESC' },
     });
 
-    return articles.map((article) => new ArticleResponseDto(article));
+    return {
+      data: articles.map((article) => new ArticleResponseDto(article)),
+      meta: new PaginationMetaDto(query.page, query.limit, total),
+    };
   }
 
   async findOneOrFail(id: number): Promise<ArticleResponseDto> {
-    const article = await this.findEntityOrFail(id);
+    const article = await findEntityOrFail(
+      this.articleRepository,
+      { where: { id }, relations: { author: true } },
+      this.i18n.t('articles.error.notFound'),
+    );
 
     return new ArticleResponseDto(article);
   }
@@ -54,11 +70,19 @@ export class ArticlesService {
     currentUser: AccessTokenPayload,
     dto: UpdateArticleDto,
   ): Promise<ArticleResponseDto> {
-    const article = await this.findEntityOrFail(id);
+    const article = await findEntityOrFail(
+      this.articleRepository,
+      { where: { id }, relations: { author: true } },
+      this.i18n.t('articles.error.notFound'),
+    );
 
-    this.assertCanModify(article, currentUser);
+    assertOwnerOrAdmin(
+      currentUser,
+      article.author.id === currentUser.sub,
+      this.i18n.t('common.error.forbidden'),
+    );
 
-    if (dto.title) {
+    if (dto.title?.trim()) {
       article.title = dto.title;
     }
 
@@ -72,35 +96,18 @@ export class ArticlesService {
   }
 
   async remove(id: number, currentUser: AccessTokenPayload): Promise<void> {
-    const article = await this.findEntityOrFail(id);
+    const article = await findEntityOrFail(
+      this.articleRepository,
+      { where: { id }, relations: { author: true } },
+      this.i18n.t('articles.error.notFound'),
+    );
 
-    this.assertCanModify(article, currentUser);
+    assertOwnerOrAdmin(
+      currentUser,
+      article.author.id === currentUser.sub,
+      this.i18n.t('common.error.forbidden'),
+    );
 
     await this.articleRepository.delete(id);
-  }
-
-  private async findEntityOrFail(id: number): Promise<Article> {
-    const article = await this.articleRepository.findOne({
-      where: { id },
-      relations: { author: true },
-    });
-
-    if (!article) {
-      throw new NotFoundException(this.i18n.t('articles.error.notFound'));
-    }
-
-    return article;
-  }
-
-  private assertCanModify(
-    article: Article,
-    currentUser: AccessTokenPayload,
-  ): void {
-    const isAdmin = currentUser.role === 'admin';
-    const isAuthor = article.author.id === currentUser.sub;
-
-    if (!isAuthor && !isAdmin) {
-      throw new ForbiddenException(this.i18n.t('articles.error.forbidden'));
-    }
   }
 }

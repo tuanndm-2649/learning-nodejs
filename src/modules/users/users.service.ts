@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,7 +7,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { I18nService } from 'nestjs-i18n';
 import { Repository } from 'typeorm';
+import { PaginationMetaDto } from 'src/common/dto/paginated-response.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { AccessTokenPayload } from 'src/common/interfaces/token-payload.interface';
+import { assertOwnerOrAdmin } from 'src/common/utils/assert-owner-or-admin.util';
+import { findEntityOrFail } from 'src/common/utils/find-entity-or-fail.util';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 
@@ -48,22 +51,31 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
-  findAll(): Promise<User[]> {
-    return this.userRepository.find();
+  async findAll(
+    query: PaginationQueryDto,
+  ): Promise<{ data: User[]; meta: PaginationMetaDto }> {
+    const [users, total] = await this.userRepository.findAndCount({
+      skip: query.skip,
+      take: query.limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: users,
+      meta: new PaginationMetaDto(query.page, query.limit, total),
+    };
   }
 
   findById(id: number): Promise<User | null> {
     return this.userRepository.findOneBy({ id });
   }
 
-  async findOneOrFail(id: number): Promise<User> {
-    const user = await this.findById(id);
-
-    if (!user) {
-      throw new NotFoundException(this.i18n.t('users.error.notFound'));
-    }
-
-    return user;
+  findOneOrFail(id: number): Promise<User> {
+    return findEntityOrFail(
+      this.userRepository,
+      { where: { id } },
+      this.i18n.t('users.error.notFound'),
+    );
   }
 
   findByIdWithRefreshTokenHash(userId: number): Promise<User | null> {
@@ -91,13 +103,18 @@ export class UsersService {
     dto: UpdateUserDto,
   ): Promise<User> {
     const isAdmin = currentUser.role === 'admin';
-    const isSelf = currentUser.sub === id;
 
-    if (!isSelf && !isAdmin) {
-      throw new ForbiddenException(this.i18n.t('users.error.forbidden'));
-    }
+    assertOwnerOrAdmin(
+      currentUser,
+      currentUser.sub === id,
+      this.i18n.t('common.error.forbidden'),
+    );
 
-    const user = await this.findOneOrFail(id);
+    const user = await findEntityOrFail(
+      this.userRepository,
+      { where: { id } },
+      this.i18n.t('users.error.notFound'),
+    );
 
     if (dto.name) {
       user.name = dto.name;

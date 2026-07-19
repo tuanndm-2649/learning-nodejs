@@ -9,10 +9,17 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
+import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import type { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
@@ -37,8 +44,9 @@ export class UsersController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles(['admin'])
-  findAll() {
-    return this.usersService.findAll();
+  @ApiOkResponse({ type: PaginatedResponseDto(UserResponseDto) })
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.usersService.findAll(query);
   }
 
   @Get(':id')
