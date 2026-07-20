@@ -20,6 +20,7 @@ import { ArticlesModule } from './modules/articles/articles.module';
 import { APP_FILTER, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filter/all-exceptions.filter';
+import { CommentsModule } from './modules/comments/comments.module';
 
 @Module({
   imports: [
@@ -32,8 +33,6 @@ import { AllExceptionsFilter } from './common/filter/all-exceptions.filter';
       },
     }),
     TypeOrmModule.forRootAsync(typeOrmConfig),
-    UsersModule,
-    ArticlesModule,
     I18nModule.forRootAsync({
       useFactory: () => ({
         fallbackLanguage: 'en',
@@ -49,7 +48,10 @@ import { AllExceptionsFilter } from './common/filter/all-exceptions.filter';
         AcceptLanguageResolver,
       ],
     }),
+    UsersModule,
+    ArticlesModule,
     AuthModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [

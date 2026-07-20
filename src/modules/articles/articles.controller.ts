@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import {
@@ -16,6 +17,8 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
 } from '@nestjs/swagger';
+import { PaginatedResponseDto } from 'src/common/dto/paginated-response.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import type { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { ArticlesService } from './articles.service';
 import { ArticleResponseDto } from './dto/article-response.dto';
@@ -37,9 +40,9 @@ export class ArticlesController {
   }
 
   @Get()
-  @ApiOkResponse({ type: [ArticleResponseDto] })
-  findAll(): Promise<ArticleResponseDto[]> {
-    return this.articlesService.findAll();
+  @ApiOkResponse({ type: PaginatedResponseDto(ArticleResponseDto) })
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.articlesService.findAll(query);
   }
 
   @Get(':id')
