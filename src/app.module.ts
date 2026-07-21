@@ -21,6 +21,8 @@ import { APP_FILTER, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filter/all-exceptions.filter';
 import { CommentsModule } from './modules/comments/comments.module';
+import { FollowModule } from './modules/follow/follow.module';
+import { LikesModule } from './modules/likes/likes.module';
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { CommentsModule } from './modules/comments/comments.module';
     ArticlesModule,
     AuthModule,
     CommentsModule,
+    FollowModule,
+    LikesModule,
   ],
   controllers: [AppController],
   providers: [

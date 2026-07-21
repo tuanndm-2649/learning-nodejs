@@ -1,0 +1,7 @@
+{
+  "error": {
+    "errorFollow": "You can not follow this user",
+    "errorUnfollow": "You can not unfollow this user",
+    "selfFollow": "You can not follow yourself"
+  }
+}

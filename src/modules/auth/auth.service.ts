@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomUUID, timingSafeEqual } from 'crypto';
 import type { SignOptions } from 'jsonwebtoken';
 import { I18nService } from 'nestjs-i18n';
 import {
@@ -20,7 +21,15 @@ import { RegisterResponseDto } from './dto/register-response.dto';
 
 @Injectable()
 export class AuthService {
-  private readonly saltRounds = 12;
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private compareTokenHash(token: string, hash: string): boolean {
+    const tokenHash = this.hashToken(token);
+
+    return timingSafeEqual(Buffer.from(tokenHash), Buffer.from(hash));
+  }
 
   constructor(
     private readonly usersService: UsersService,
@@ -63,10 +72,7 @@ export class AuthService {
       role: user.role,
     });
 
-    const refreshTokenHash = await bcrypt.hash(
-      tokens.refreshToken,
-      this.saltRounds,
-    );
+    const refreshTokenHash = this.hashToken(tokens.refreshToken);
 
     await this.usersService.updateRefreshTokenHash(user.id, refreshTokenHash);
 
@@ -88,6 +94,7 @@ export class AuthService {
     const refreshPayload: RefreshTokenPayload = {
       sub: user.id,
       type: 'refresh',
+      jti: randomUUID(),
     };
 
     const refreshSecret =
@@ -142,7 +149,7 @@ export class AuthService {
       );
     }
 
-    const refreshTokenMatched = await bcrypt.compare(
+    const refreshTokenMatched = this.compareTokenHash(
       refreshToken,
       user.refreshTokenHash,
     );
@@ -159,11 +166,7 @@ export class AuthService {
       role: user.role,
     });
 
-    // Rotation: lưu hash refresh token mới
-    const newRefreshTokenHash = await bcrypt.hash(
-      tokens.refreshToken,
-      this.saltRounds,
-    );
+    const newRefreshTokenHash = this.hashToken(tokens.refreshToken);
 
     await this.usersService.updateRefreshTokenHash(
       user.id,
