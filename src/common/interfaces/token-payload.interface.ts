@@ -8,6 +8,7 @@ export interface AccessTokenPayload {
 export interface RefreshTokenPayload {
   sub: number;
   type: 'refresh';
+  jti: string;
 }
 
 export interface TokenUser {
